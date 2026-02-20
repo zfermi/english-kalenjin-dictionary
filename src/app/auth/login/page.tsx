@@ -8,6 +8,8 @@ import clsx from 'clsx'
 
 type Mode = 'login' | 'signup' | 'magic' | 'sent'
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://english-kalenjin-dictionary-production.up.railway.app'
+
 export default function LoginPage() {
     const supabase = createClient()
     const router = useRouter()
@@ -32,7 +34,7 @@ export default function LoginPage() {
                     password,
                     options: {
                         data: { name: username || email.split('@')[0] },
-                        emailRedirectTo: `${location.origin}/auth/callback`,
+                        emailRedirectTo: `${SITE_URL}/auth/callback`,
                     },
                 })
                 if (signUpErr) throw signUpErr
