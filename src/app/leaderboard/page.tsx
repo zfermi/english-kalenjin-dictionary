@@ -13,16 +13,25 @@ const PODIUM_COLORS = [
 const PODIUM_EMOJI = ['🥇', '🥈', '🥉']
 
 export default async function LeaderboardPage() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    let user = null
+    let leaders: any[] = []
 
-    const { data: leaders } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, xp, rank_title, streak_days')
-        .order('xp', { ascending: false })
-        .limit(50)
+    try {
+        const supabase = await createClient()
+        const { data: { user: u } } = await supabase.auth.getUser()
+        user = u
 
-    const myRank = leaders?.findIndex(l => l.id === user?.id) ?? -1
+        const { data } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url, xp, rank_title, streak_days')
+            .order('xp', { ascending: false })
+            .limit(50)
+        leaders = data ?? []
+    } catch (e) {
+        console.error('Supabase error:', e)
+    }
+
+    const myRank = leaders.findIndex(l => l.id === user?.id)
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">

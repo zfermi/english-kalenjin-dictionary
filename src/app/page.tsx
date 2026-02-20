@@ -4,30 +4,42 @@ import Link from 'next/link'
 import { BookOpen, Trophy, Flame, ChevronRight, Star, Zap } from 'lucide-react'
 
 export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Fetch today's featured word
-  const today = new Date().toISOString().split('T')[0]
-  const { data: featuredWord } = await supabase
-    .from('words')
-    .select('*, categories(name, icon)')
-    .eq('featured_date', today)
-    .single()
-
-  // Fetch recently crowned translations
-  const { data: recentCrowns } = await supabase
-    .from('translations')
-    .select('*, words(english_word), profiles(username)')
-    .eq('status', 'crowned')
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  // Fetch user profile if logged in
+  let user = null
+  let featuredWord = null
+  let recentCrowns: any[] = []
   let profile = null
-  if (user) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    profile = data
+
+  try {
+    const supabase = await createClient()
+    const { data: { user: u } } = await supabase.auth.getUser()
+    user = u
+
+    // Fetch today's featured word
+    const today = new Date().toISOString().split('T')[0]
+    const { data: fw } = await supabase
+      .from('words')
+      .select('*, categories(name, icon)')
+      .eq('featured_date', today)
+      .single()
+    featuredWord = fw
+
+    // Fetch recently crowned translations
+    const { data: rc } = await supabase
+      .from('translations')
+      .select('*, words(english_word), profiles(username)')
+      .eq('status', 'crowned')
+      .order('created_at', { ascending: false })
+      .limit(5)
+    recentCrowns = rc ?? []
+
+    // Fetch user profile if logged in
+    if (user) {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      profile = data
+    }
+  } catch (e) {
+    // Supabase not configured or schema not loaded — render static page
+    console.error('Supabase error:', e)
   }
 
   const rankInfo = profile ? getRankInfo(profile.xp) : null

@@ -5,14 +5,20 @@ import Link from 'next/link'
 export const revalidate = 3600
 
 export default async function DailyPage() {
-    const supabase = await createClient()
+    let featuredWord = null
 
-    const today = new Date().toISOString().split('T')[0]
-    const { data: featuredWord } = await supabase
-        .from('words')
-        .select('*, categories(name, icon), translations(id, kipsigis_text, status, upvotes_count, speaker_context)')
-        .eq('featured_date', today)
-        .single()
+    try {
+        const supabase = await createClient()
+        const today = new Date().toISOString().split('T')[0]
+        const { data } = await supabase
+            .from('words')
+            .select('*, categories(name, icon), translations(id, kipsigis_text, status, upvotes_count, speaker_context)')
+            .eq('featured_date', today)
+            .single()
+        featuredWord = data
+    } catch (e) {
+        console.error('Supabase error:', e)
+    }
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">
