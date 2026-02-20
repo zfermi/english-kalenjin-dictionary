@@ -1,9 +1,13 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { BookOpen, Trophy, Star, Home, Search, Plus } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { BookOpen, Trophy, Star, Home, Search, Plus, LogIn, LogOut, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { getRankInfo } from '@/lib/gamification'
 import clsx from 'clsx'
+import type { Profile } from '@/lib/types'
 
 const navItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -15,6 +19,46 @@ const navItems = [
 
 export function NavBar() {
     const pathname = usePathname()
+    const router = useRouter()
+    const supabase = createClient()
+    const [user, setUser] = useState<any>(null)
+    const [profile, setProfile] = useState<Profile | null>(null)
+    const [showMenu, setShowMenu] = useState(false)
+
+    useEffect(() => {
+        async function getUser() {
+            const { data: { user: u } } = await supabase.auth.getUser()
+            setUser(u)
+            if (u) {
+                const { data } = await supabase.from('profiles').select('*').eq('id', u.id).single()
+                setProfile(data)
+            }
+        }
+        getUser()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                setUser(session.user)
+                supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => setProfile(data))
+            } else {
+                setUser(null)
+                setProfile(null)
+            }
+        })
+
+        return () => subscription.unsubscribe()
+    }, [supabase])
+
+    async function handleSignOut() {
+        await supabase.auth.signOut()
+        setUser(null)
+        setProfile(null)
+        setShowMenu(false)
+        router.push('/')
+        router.refresh()
+    }
+
+    const rankInfo = profile ? getRankInfo(profile.xp) : null
 
     return (
         <>
@@ -55,15 +99,74 @@ export function NavBar() {
                     })}
                 </nav>
 
-                {/* Add word CTA */}
-                <div className="p-4 border-t border-white/7">
-                    <Link
-                        href="/submit"
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-                    >
-                        <Plus size={16} />
-                        Add Translation
-                    </Link>
+                {/* User section & Add CTA */}
+                <div className="border-t border-white/7">
+                    {/* User card or Sign In button */}
+                    {user && profile ? (
+                        <div className="p-3">
+                            <div
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 cursor-pointer transition-colors"
+                            >
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                                    {profile.avatar_url ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                                    ) : (
+                                        (profile.username?.[0] ?? '?').toUpperCase()
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white text-sm font-semibold truncate">{profile.username}</p>
+                                    <p className="text-slate-500 text-xs">{rankInfo?.emoji} {profile.xp} XP</p>
+                                </div>
+                            </div>
+
+                            {/* Dropdown menu */}
+                            {showMenu && (
+                                <div className="mt-1 mb-1 mx-1 bg-[#161d2f] border border-white/10 rounded-xl overflow-hidden slide-in">
+                                    <div className="p-3 border-b border-white/5">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-slate-400">Rank</span>
+                                            <span className="text-amber-400 font-semibold">{rankInfo?.emoji} {profile.rank_title}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs mt-1">
+                                            <span className="text-slate-400">Streak</span>
+                                            <span className="text-orange-400 font-semibold">🔥 {profile.streak_days}d</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleSignOut}
+                                        className="w-full flex items-center gap-2 px-3 py-2.5 text-red-400 text-sm hover:bg-red-500/10 transition-colors"
+                                    >
+                                        <LogOut size={14} />
+                                        Sign Out
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="p-3">
+                            <Link
+                                href="/auth/login"
+                                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition"
+                            >
+                                <LogIn size={15} />
+                                Sign In
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Add translation CTA */}
+                    <div className="px-3 pb-3">
+                        <Link
+                            href="/submit"
+                            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                        >
+                            <Plus size={16} />
+                            Add Translation
+                        </Link>
+                    </div>
                 </div>
             </aside>
 
@@ -85,6 +188,18 @@ export function NavBar() {
                         </Link>
                     )
                 })}
+                {/* Profile / Sign In on mobile */}
+                <Link
+                    href={user ? '#' : '/auth/login'}
+                    onClick={user ? (e) => { e.preventDefault(); handleSignOut() } : undefined}
+                    className={clsx(
+                        'flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition-all',
+                        pathname === '/auth/login' ? 'text-amber-400' : 'text-slate-500'
+                    )}
+                >
+                    {user ? <LogOut size={20} /> : <User size={20} />}
+                    <span>{user ? 'Sign Out' : 'Sign In'}</span>
+                </Link>
             </nav>
         </>
     )
