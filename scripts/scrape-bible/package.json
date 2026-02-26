@@ -1,0 +1,13 @@
+{
+    "name": "kalenjin-bible-scraper",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "Scrapes parallel Kalenjin (KALDC) and English (NIV) Bible text from Bible.com",
+    "scripts": {
+        "scrape": "node scraper.mjs",
+        "scrape:test": "node scraper.mjs --book PSA --chapter 127"
+    },
+    "dependencies": {
+        "puppeteer-core": "^24.0.0"
+    }
+}

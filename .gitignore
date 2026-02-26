@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bible scraper
+scripts/scrape-bible/data/
+scripts/scrape-bible/node_modules/
