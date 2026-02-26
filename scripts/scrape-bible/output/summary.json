@@ -1,0 +1,10 @@
+{
+  "total_verses": 2461,
+  "kalenjin_unique_words": 5236,
+  "english_unique_words": 3119,
+  "total_pairs_analyzed": 105495,
+  "pairs_above_threshold": 14547,
+  "dictionary_entries": 1354,
+  "min_confidence": 0.15,
+  "generated_at": "2026-02-26T16:22:05.534Z"
+}

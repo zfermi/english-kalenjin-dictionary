@@ -8,6 +8,7 @@
         "scrape:test": "node scraper.mjs --book PSA --chapter 127"
     },
     "dependencies": {
+        "@supabase/supabase-js": "^2.98.0",
         "puppeteer-core": "^24.0.0"
     }
 }
