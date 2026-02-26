@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronUp, Crown, Plus, X, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronUp, Crown, Plus, X, Loader2, AlertCircle, Flag, Check } from 'lucide-react'
 import clsx from 'clsx'
 import type { Word, Translation } from '@/lib/types'
 
@@ -32,6 +32,10 @@ function WordCard({ word, userId }: WordCardProps) {
     const [showForm, setShowForm] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [voting, setVoting] = useState<string | null>(null)
+    const [flaggingId, setFlaggingId] = useState<string | null>(null)
+    const [amendForm, setAmendForm] = useState({ suggested_text: '', reason: '' })
+    const [amendSubmitting, setAmendSubmitting] = useState(false)
+    const [amendSuccess, setAmendSuccess] = useState<string | null>(null)
     const [form, setForm] = useState({
         kipsigis_text: '',
         phonetic: '',
@@ -94,6 +98,30 @@ function WordCard({ word, userId }: WordCardProps) {
         }
     }
 
+    async function handleAmendSubmit(translationId: string) {
+        if (!userId) return alert('Please sign in to submit corrections.')
+        if (!amendForm.suggested_text.trim()) return
+        setAmendSubmitting(true)
+        try {
+            const res = await fetch('/api/amend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    translationId,
+                    suggestedText: amendForm.suggested_text,
+                    reason: amendForm.reason,
+                }),
+            })
+            if (res.ok) {
+                setAmendSuccess(translationId)
+                setAmendForm({ suggested_text: '', reason: '' })
+                setFlaggingId(null)
+                setTimeout(() => setAmendSuccess(null), 3000)
+            }
+        } finally {
+            setAmendSubmitting(false)
+        }
+    }
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!userId) return alert('Please sign in to submit.')
@@ -241,6 +269,56 @@ function WordCard({ word, userId }: WordCardProps) {
                                             />
                                         </div>
                                         <span className="text-slate-600 text-xs">{t.upvotes_count}/10 to crown</span>
+                                    </div>
+                                )}
+
+                                {/* Flag / Suggest Correction */}
+                                <div className="mt-2 flex items-center gap-2">
+                                    {amendSuccess === t.id ? (
+                                        <span className="flex items-center gap-1.5 text-green-400 text-xs">
+                                            <Check size={12} /> Correction submitted! +5 XP
+                                        </span>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setFlaggingId(flaggingId === t.id ? null : t.id)
+                                                setAmendForm({ suggested_text: '', reason: '' })
+                                            }}
+                                            className="flex items-center gap-1 text-slate-600 hover:text-red-400 text-xs transition-colors"
+                                        >
+                                            <Flag size={11} />
+                                            {flaggingId === t.id ? 'Cancel' : 'Suggest correction'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Amendment Form */}
+                                {flaggingId === t.id && (
+                                    <div className="mt-3 p-3 bg-red-500/5 border border-red-500/15 rounded-lg space-y-2 slide-in">
+                                        <p className="text-red-400 text-xs font-medium flex items-center gap-1.5">
+                                            <Flag size={11} /> Suggest a correction
+                                            <span className="ml-auto text-amber-400">+5 XP</span>
+                                        </p>
+                                        <input
+                                            value={amendForm.suggested_text}
+                                            onChange={e => setAmendForm(f => ({ ...f, suggested_text: e.target.value }))}
+                                            placeholder="Correct Kipsigis word..."
+                                            className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-600 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-red-500/50"
+                                        />
+                                        <input
+                                            value={amendForm.reason}
+                                            onChange={e => setAmendForm(f => ({ ...f, reason: e.target.value }))}
+                                            placeholder="Why is it wrong? (optional)"
+                                            className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-600 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-red-500/50"
+                                        />
+                                        <button
+                                            onClick={() => handleAmendSubmit(t.id)}
+                                            disabled={amendSubmitting || !amendForm.suggested_text.trim()}
+                                            className="w-full py-2 bg-red-500/20 border border-red-500/30 text-red-400 font-medium rounded-lg text-xs hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                        >
+                                            {amendSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Flag size={12} />}
+                                            Submit Correction
+                                        </button>
                                     </div>
                                 )}
                             </div>

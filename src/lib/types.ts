@@ -81,3 +81,14 @@ export interface LeaderboardEntry {
     rank_title: string
     streak_days: number
 }
+
+export interface Amendment {
+    id: string
+    translation_id: string
+    suggested_text: string
+    reason: string | null
+    submitted_by: string | null
+    status: 'pending' | 'approved' | 'rejected'
+    created_at: string
+    profiles?: Profile
+}
